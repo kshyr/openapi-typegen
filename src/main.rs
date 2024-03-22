@@ -7,10 +7,13 @@ const FILENAME: &str = "openapi.json";
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    dotenv::dotenv().ok();
     let openapi_json = if Path::new(FILENAME).exists() {
         read_file_to_json(FILENAME)?
     } else {
-        let url = std::env::var("OPENAPI_JSON_URL").unwrap();
+        let url = std::env::var("OPENAPI_JSON_URL").expect(
+            "Please set the OPENAPI_JSON_URL environment variable to the URL of the OpenAPI JSON file",
+        );
         let response = reqwest::get(url).await?.json().await?;
         write_json_to_file(FILENAME, &response)?;
         response
