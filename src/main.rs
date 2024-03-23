@@ -1,4 +1,7 @@
-pub mod jsdoc_builder;
+mod jsdoc;
+mod openapi;
+
+use openapi::parser::OpenAPI;
 use std::fs::File;
 use std::io::{self, Read};
 use std::path::Path;
@@ -8,6 +11,7 @@ const FILENAME: &str = "openapi.json";
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     dotenv::dotenv().ok();
+
     let openapi_json = if Path::new(FILENAME).exists() {
         read_file_to_json(FILENAME)?
     } else {
@@ -19,9 +23,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         response
     };
 
-    let keys_array = openapi_json["components"]["schemas"].as_object().unwrap();
-
-    println!("{:#?}", keys_array);
+    let oas = OpenAPI::from_json(openapi_json)?;
+    let schemas = oas.components.unwrap().schemas;
+    let schemas = schemas.into_iter().map(|(_, v)| v).collect::<Vec<_>>();
+    println!("{:?}", schemas);
     Ok(())
 }
 

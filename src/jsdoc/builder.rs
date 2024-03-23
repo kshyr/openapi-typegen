@@ -1,11 +1,13 @@
-#[derive(Debug)]
-pub struct JSDocBuilder {
-    doc: String,
-}
+#![allow(unused)]
 
 pub enum JSDocTag {
     Typedef,
     Property,
+}
+
+#[derive(Debug)]
+pub struct JSDocBuilder {
+    doc: String,
 }
 
 impl JSDocBuilder {
@@ -34,12 +36,6 @@ impl JSDocBuilder {
     pub fn build(&mut self) -> String {
         self.add_line("*/");
         self.doc.clone()
-    }
-}
-
-impl Default for JSDocBuilder {
-    fn default() -> Self {
-        Self::new()
     }
 }
 
