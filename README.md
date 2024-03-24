@@ -1,5 +1,3 @@
-### Environmental variables (`.env`)
+### Usage
 
-```
-OPENAPI_JSON_URL = "https://api.example.com/openapi.json"
-```
+`cargo install openapi-to-jsdoc`
