@@ -1,6 +1,6 @@
 [package]
 name = "openapi-to-jsdoc"
-version = "0.1.2"
+version = "0.1.3"
 edition = "2021"
 description = "Generate JSDoc typedefs from OpenAPI 3.0.x spec schemas"
 license = "MIT"
