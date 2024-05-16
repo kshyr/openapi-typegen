@@ -36,7 +36,15 @@ fn build_jsdoc_typedef(allocator: std.mem.Allocator, schema_key: []const u8, sch
         const type_ = try get_jsdoc_type(allocator, value, "");
         try output.append(type_);
         try output.append("} ");
-        try output.append(key);
+
+        if (is_property_required(schema_object, key)) {
+            try output.append(key);
+        } else {
+            try output.append("[");
+            try output.append(key);
+            try output.append("]");
+        }
+
         try output.append("\n");
     }
     try output.append(" */\n");
@@ -45,6 +53,17 @@ fn build_jsdoc_typedef(allocator: std.mem.Allocator, schema_key: []const u8, sch
     try stdout.print("JSDoc Typedef: {s}\n", .{output_str});
 
     return output_str;
+}
+
+fn is_property_required(schema_object: std.json.Value, property_key: []const u8) bool {
+    const required = schema_object.object.get("required") orelse return false;
+
+    for (required.array.items) |required_key| {
+        if (std.mem.eql(u8, required_key.string, property_key)) {
+            return true;
+        }
+    }
+    return false;
 }
 
 fn get_jsdoc_type(allocator: std.mem.Allocator, value: std.json.Value, array_suffix: []const u8) ![]const u8 {
