@@ -83,18 +83,15 @@ fn get_jsdoc_type(allocator: std.mem.Allocator, value: std.json.Value, array_suf
             const items = value.object.get("items").?;
             const item_type = try get_jsdoc_type(allocator, items, "[]");
             return item_type;
-        } else if (std.mem.eql(u8, type_.string, "object")) {
-            return "Object";
-        } else if (std.mem.eql(u8, type_.string, "string")) {
-            return "string";
-        } else if (std.mem.eql(u8, type_.string, "number")) {
-            return "number";
-        } else if (std.mem.eql(u8, type_.string, "integer")) {
-            return "number";
-        } else if (std.mem.eql(u8, type_.string, "boolean")) {
-            return "boolean";
         }
-        return try std.fmt.allocPrint(allocator, "{s}{s}", .{ type_.string, array_suffix });
+
+        var type_str = type_.string;
+
+        if (std.mem.eql(u8, type_str, "integer")) {
+            type_str = "number";
+        }
+
+        return try std.fmt.allocPrint(allocator, "{s}{s}", .{ type_str, array_suffix });
     } else {
         const ref = value.object.get("$ref").?.string;
         var split = std.mem.split(u8, ref, "/");
