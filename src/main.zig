@@ -10,21 +10,27 @@ const stdout = std.io.getStdOut().writer();
 
 var typescript = true;
 
-fn buildOutput(allocator: std.mem.Allocator, target: Target, json_contents: []u8) ![]u8 {
+const OutputResult = struct {
+    num_types: usize,
+    output_str: []u8,
+};
+
+fn buildOutput(allocator: std.mem.Allocator, target: Target, json_contents: []u8) !OutputResult {
     const json = try std.json.parseFromSlice(std.json.Value, allocator, json_contents, .{});
     defer json.deinit();
 
     var contents = std.ArrayList([]const u8).init(allocator);
     defer contents.deinit();
 
-    try stdout.print("Parsed JSON: {any}\n", .{json});
-
     const schemas = json.value.object.get("components").?.object.get("schemas").?.object;
     for (schemas.keys(), schemas.values()) |key, value| {
         try contents.append(try target.buildTypedef(allocator, key, value));
     }
 
-    return std.mem.join(allocator, "\n", contents.items);
+    const num_types = schemas.keys().len;
+    const output_str = try std.mem.join(allocator, "\n", contents.items);
+
+    return OutputResult{ .num_types = num_types, .output_str = output_str };
 }
 
 pub fn main() !void {
@@ -34,8 +40,11 @@ pub fn main() !void {
     defer std.process.argsFree(allocator, args_with_exe);
     const args = args_with_exe[1..]; // remove the executable name
 
-    if (args.len != 2 or sliceEql(args[0], "help")) {
-        try stdout.print("Usage: openapi-to-jsdoc <input_file> <output_file>\n", .{});
+    if (args.len != 3 or sliceEql(args[0], "help")) {
+        try stdout.print(
+            "Usage: openapi-to-jsdoc -target=<jsdoc|ts> <input_file> <output_file>\n",
+            .{},
+        );
     }
 
     const input_file = try std.fs.cwd().openFile(args[0], .{ .mode = .read_only });
@@ -52,9 +61,21 @@ pub fn main() !void {
         target = Target{ .typescript = Typescript{} };
     }
 
-    const output_str = try buildOutput(allocator, target, input_contents);
+    const output = try buildOutput(allocator, target, input_contents);
+    try output_file.writeAll(output.output_str);
 
-    try output_file.writeAll(output_str);
-
-    try stdout.print("Successfully written JSDoc typedefs to {s}.\n", .{args[1]});
+    switch (target) {
+        .jsdoc => {
+            try stdout.print(
+                "Successfully written {d} JSDoc typedefs to {s}.\n",
+                .{ output.num_types, args[1] },
+            );
+        },
+        .typescript => {
+            try stdout.print(
+                "Successfully written {d} TypeScript types to {s}.\n",
+                .{ output.num_types, args[1] },
+            );
+        },
+    }
 }
