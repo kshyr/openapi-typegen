@@ -1,6 +1,7 @@
 .{
-    .name = "openapi-to-jsdoc",
+    .name = "openapi-typegen",
     .version = "0.2.2",
+    .description = "Generate type definitions from OpenAPI 3.0.x",
     .paths = .{
         "build.zig",
         "build.zig.zon",

@@ -1,8 +1,16 @@
 const std = @import("std");
+const openapi = @import("openapi.zig");
+const sliceEql = @import("util.zig").sliceEql;
+const _target = @import("target.zig");
+const Target = _target.Target;
+const Jsdoc = _target.Jsdoc;
+const Typescript = _target.Typescript;
 
 const stdout = std.io.getStdOut().writer();
 
-fn build_output(allocator: std.mem.Allocator, json_contents: []u8) ![]u8 {
+var typescript = true;
+
+fn buildOutput(allocator: std.mem.Allocator, target: Target, json_contents: []u8) ![]u8 {
     const json = try std.json.parseFromSlice(std.json.Value, allocator, json_contents, .{});
     defer json.deinit();
 
@@ -13,94 +21,10 @@ fn build_output(allocator: std.mem.Allocator, json_contents: []u8) ![]u8 {
 
     const schemas = json.value.object.get("components").?.object.get("schemas").?.object;
     for (schemas.keys(), schemas.values()) |key, value| {
-        try stdout.print("Schema: {s}\n", .{key});
-        try contents.append(try build_jsdoc_typedef(allocator, key, value));
+        try contents.append(try target.buildTypedef(allocator, key, value));
     }
 
     return std.mem.join(allocator, "\n", contents.items);
-}
-
-fn build_jsdoc_typedef(allocator: std.mem.Allocator, schema_key: []const u8, schema_object: std.json.Value) ![]u8 {
-    var output = std.ArrayList([]const u8).init(allocator);
-    defer output.deinit();
-
-    try output.append("/**\n");
-    try output.append(" * @typedef {Object} ");
-    try output.append(schema_key);
-    try output.append("\n");
-
-    const properties = schema_object.object.get("properties").?.object;
-
-    for (properties.keys(), properties.values()) |key, value| {
-        try output.append(" * @property {");
-        const type_ = try get_jsdoc_type(allocator, value, "");
-        try output.append(type_);
-        try output.append("} ");
-
-        if (is_property_required(schema_object, key)) {
-            try output.append(key);
-        } else {
-            try output.append("[");
-            try output.append(key);
-            try output.append("]");
-        }
-
-        try output.append("\n");
-    }
-    try output.append(" */\n");
-
-    const output_str = try std.mem.join(allocator, "", output.items);
-    try stdout.print("JSDoc Typedef: {s}\n", .{output_str});
-
-    return output_str;
-}
-
-fn is_property_required(schema_object: std.json.Value, property_key: []const u8) bool {
-    const required = schema_object.object.get("required") orelse return false;
-
-    for (required.array.items) |required_key| {
-        if (std.mem.eql(u8, required_key.string, property_key)) {
-            return true;
-        }
-    }
-    return false;
-}
-
-fn get_jsdoc_type(allocator: std.mem.Allocator, value: std.json.Value, array_suffix: []const u8) ![]const u8 {
-    if (value.object.get("enum")) |enum_| {
-        const enum_values = enum_.array.items;
-        var output = std.ArrayList([]const u8).init(allocator);
-        defer output.deinit();
-
-        for (enum_values) |enum_value| {
-            try output.append(try std.fmt.allocPrint(allocator, "\"{s}\"", .{enum_value.string}));
-        }
-
-        return try std.mem.join(allocator, " | ", output.items);
-    }
-    if (value.object.get("type")) |type_| {
-        if (std.mem.eql(u8, type_.string, "array")) {
-            const items = value.object.get("items").?;
-            const item_type = try get_jsdoc_type(allocator, items, "[]");
-            return item_type;
-        }
-
-        var type_str = type_.string;
-
-        if (std.mem.eql(u8, type_str, "integer")) {
-            type_str = "number";
-        }
-
-        return try std.fmt.allocPrint(allocator, "{s}{s}", .{ type_str, array_suffix });
-    } else {
-        const ref = value.object.get("$ref").?.string;
-        var split = std.mem.split(u8, ref, "/");
-        var ref_key: []const u8 = undefined;
-        while (split.next()) |part| {
-            ref_key = part;
-        }
-        return try std.fmt.allocPrint(allocator, "{s}{s}", .{ ref_key, array_suffix });
-    }
 }
 
 pub fn main() !void {
@@ -110,7 +34,7 @@ pub fn main() !void {
     defer std.process.argsFree(allocator, args_with_exe);
     const args = args_with_exe[1..]; // remove the executable name
 
-    if (args.len != 2 or std.mem.eql(u8, args[0], "help")) {
+    if (args.len != 2 or sliceEql(args[0], "help")) {
         try stdout.print("Usage: openapi-to-jsdoc <input_file> <output_file>\n", .{});
     }
 
@@ -123,7 +47,12 @@ pub fn main() !void {
     const output_file = try std.fs.cwd().createFile(args[1], .{});
     defer output_file.close();
 
-    const output_str = try build_output(allocator, input_contents);
+    var target = Target{ .jsdoc = Jsdoc{} };
+    if (typescript) {
+        target = Target{ .typescript = Typescript{} };
+    }
+
+    const output_str = try buildOutput(allocator, target, input_contents);
 
     try output_file.writeAll(output_str);
 

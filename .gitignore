@@ -1,5 +1,6 @@
 openapi.json
 types.js
+types.ts
 .env
-zig-cache
+.zig-cache
 zig-out
