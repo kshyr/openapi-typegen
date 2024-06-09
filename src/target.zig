@@ -25,12 +25,11 @@ pub const Target = union(enum) {
 
 pub const Jsdoc = struct {
     pub fn buildTypedef(
-        self: Jsdoc,
+        _: Jsdoc,
         allocator: Allocator,
         schema_key: []const u8,
         schema_object: std.json.Value,
     ) ![]u8 {
-        _ = self; // autofix
         var output = std.ArrayList([]const u8).init(allocator);
         defer output.deinit();
 
@@ -114,12 +113,11 @@ pub const Jsdoc = struct {
 
 pub const Typescript = struct {
     pub fn buildTypedef(
-        self: Typescript,
+        _: Typescript,
         allocator: Allocator,
         schema_key: []const u8,
         schema_object: std.json.Value,
     ) ![]u8 {
-        _ = self; // autofix
         var output = std.ArrayList([]const u8).init(allocator);
         defer output.deinit();
 
@@ -179,6 +177,8 @@ pub const Typescript = struct {
             var type_key = try TypeKey.init(allocator, type_.string);
             if (sliceEql(type_key.value, "integer")) {
                 type_key.value = "number";
+            } else if (sliceEql(type_key.value, "object")) {
+                type_key.value = "Object";
             }
 
             return try std.fmt.allocPrint(
