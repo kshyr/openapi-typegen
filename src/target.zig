@@ -42,7 +42,7 @@ pub const Jsdoc = struct {
 
         for (properties.keys(), properties.values()) |key, value| {
             try output.append(" * @property {");
-            const type_ = try get_jsdoc_type(allocator, value, "");
+            const type_ = try getJsdocType(allocator, value, "");
             try output.append(type_);
             try output.append("} ");
 
@@ -64,7 +64,7 @@ pub const Jsdoc = struct {
         return output_str;
     }
 
-    fn get_jsdoc_type(
+    fn getJsdocType(
         allocator: std.mem.Allocator,
         value: std.json.Value,
         array_suffix: []const u8,
@@ -89,7 +89,7 @@ pub const Jsdoc = struct {
         if (value.object.get("type")) |type_| {
             if (sliceEql(type_.string, "array")) {
                 const items = value.object.get("items").?;
-                const item_type = try get_jsdoc_type(allocator, items, "[]");
+                const item_type = try getJsdocType(allocator, items, "[]");
                 return item_type;
             }
 
@@ -136,7 +136,7 @@ pub const Typescript = struct {
                 try output.append("?");
             }
             try output.append(": ");
-            const type_ = try get_typescript_type(allocator, value, "");
+            const type_ = try getTypescriptType(allocator, value, "");
             try output.append(type_);
 
             try output.append(";\n");
@@ -149,13 +149,12 @@ pub const Typescript = struct {
         return output_str;
     }
 
-    fn get_typescript_type(
+    fn getTypescriptType(
         allocator: std.mem.Allocator,
         value: std.json.Value,
         array_suffix: []const u8,
     ) ![]const u8 {
-        if (value.object.get("enum")) |enum_| {
-            const enum_values = enum_.array.items;
+        if (openapi.getEnumValues(value)) |enum_values| {
             var output = std.ArrayList([]const u8).init(allocator);
             defer output.deinit();
 
@@ -170,7 +169,7 @@ pub const Typescript = struct {
         if (value.object.get("type")) |type_| {
             if (sliceEql(type_.string, "array")) {
                 const items = value.object.get("items").?;
-                const item_type = try get_typescript_type(allocator, items, "[]");
+                const item_type = try getTypescriptType(allocator, items, "[]");
                 return item_type;
             }
 

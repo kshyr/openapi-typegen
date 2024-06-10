@@ -1,6 +1,6 @@
 .{
     .name = "openapi-typegen",
-    .version = "0.2.2",
+    .version = "0.3.0",
     .description = "Generate type definitions from OpenAPI 3.0.x",
     .paths = .{
         "build.zig",
