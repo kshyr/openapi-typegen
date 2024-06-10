@@ -1,7 +1,7 @@
-Generates JSDoc `@typedef` for every schema in OpenAPI spec.
+Generates JSDoc `@typedef` or TypeScript `type` for every schema in OpenAPI spec.
 
-Zig version: `0.12.0-dev.3180+83e578a18`
+Zig version: `0.13.0-dev.351+64ef45eb0`
 
 ---
 ### Usage
-`openapi-to-jsdoc path/to/openapi.json path/to/output.js`
+`openapi-typegen -target=<jsdoc|ts> path/to/openapi.json path/to/output.js`
